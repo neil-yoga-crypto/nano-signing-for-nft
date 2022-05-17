@@ -1,18 +1,6 @@
 <script lang="ts">
 import * as nanocurrency from 'nanocurrency';
 import { tools } from 'nanocurrency-web'
-import { wallet } from 'nanocurrency-web'
-
-// Generates a new wallet with a mnemonic phrase, seed and an account
-// You can also generate your own entropy for the mnemonic or set a seed password
-// Notice, that losing the password will make the mnemonic phrase void
-let rawWallet = wallet.generate();
-rawWallet.publicKey = rawWallet.accounts[0].publicKey;
-rawWallet.privateKey = rawWallet.accounts[0].privateKey;
-rawWallet.publicKey = rawWallet.accounts[0].publicKey;
-delete rawWallet.accounts;
-
-console.log("wallet",rawWallet);
 
 import { defineComponent } from "vue";
 
@@ -27,36 +15,77 @@ export default defineComponent({
             console.log(wallet);
             localStorage.setItem('wallet',JSON.stringify(wallet));
             return new Promise((resolve)=>resolve(wallet));
-
         },
-    },
-
-    watch: {
-        async verifyChallenge(newValue,o){
-            console.log('TRIGGERE verifyChallange');
-            const publicKey = JSON.parse(localStorage.getItem('wallet')).publicKey;
-            const signature = newValue;
-            const data = this.$data.challenge;
-            const match = tools.verify(publicKey, signature, data);
-            console.log({publicKey:publicKey,match:match});
-            this.$data.verified = match;
-        },
-        async challenge(newValue,o){
+      
+      	// Signs given challenge with privateKey from localStorage
+      	signChallenge(challenge) {
             const privateKey = JSON.parse(localStorage.getItem('wallet')).secretKey;
-            const signed = tools.sign(privateKey, newValue);
+            const signed = tools.sign(privateKey, challenge);
             console.log({signed:signed});
-            this.$data.response = signed;
+            return signed;
         }
     },
-
-    
     data() {
-        return { wallet:localStorage.getItem('wallet'), 'challenge':'?','response':'?','verifyChallenge':'?','verified':false};
+        return { wallet:localStorage.getItem('wallet'), 'challenge':'?','response':'?','verifyChallenge':'?','verified':false,ws:''};
     },
     async mounted() {
         if(!localStorage.getItem('wallet')) {
             this.$data.wallet = await this.createWallet();
         }
+      	
+        // to run new thread
+        try {
+            // connect to <host>/ws to communicate with the backend
+            this.$data.ws = new WebSocket(`ws://localhost:9000/ws`);
+            let ws = this.$data.ws; 
+            console.log('DEBUG connecting websocket',ws);
+
+              
+          this.$data.ws.onmessage = (e) => {
+            console.log('DEBUG onmessage e',e);
+        let message = e.data?.toString();
+        if (!message) return; // Ignore empty messages
+        try {
+            message = JSON.parse(message);
+        } catch (e) {
+            console.error(e);
+            return;
+        }
+        switch (message.type) {
+            case "open":
+                // request challenge
+                  this.$data.ws.send(
+                      JSON.stringify({
+                          type:'challenge'
+                      })
+                  );
+                break;
+            // to receive challenge
+            case "challenge":
+                console.log("received challenge",message);
+                const signed = this.signChallenge(message.challenge);
+                const publicKey = JSON.parse(localStorage.getItem('wallet')).publicKey;
+
+                // sending 
+                this.$data.ws.send(JSON.stringify({"type":"message",'type':'verify',"publicKey":publicKey,"signed":signed}));
+                break;
+            // to receive redirect
+            case "redirect":
+                console.log("received redirect",message);
+                setTimeout(()=> {
+                  window.location.href = message.url;
+                },3000);
+                break;
+            default:
+                console.log("WS: Unknown reponse");
+                break;
+            }
+        }
+
+        } catch(err) {
+            console.error('ws error',(err));
+        }
+      	
     },
 });
 </script>

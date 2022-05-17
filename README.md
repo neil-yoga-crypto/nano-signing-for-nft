@@ -5,12 +5,12 @@ Simple example for using a Nano wallet to sign and verify anything for NFT usage
 ![nano](nano.gif)
 
 ### Install and Run
-See ./src/components/nanoproof.vue for implementation.
 ```
 git clone https://github.com/neil-yoga/nano-signing-for-nft
 npm install
 npm run dev
 ```
+See ./src/components/nanoproof.vue for implementation.
 
 ### Bonus: Keep things alive
 ```

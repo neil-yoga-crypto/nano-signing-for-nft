@@ -1,20 +1,14 @@
 <script lang="ts">
 import * as nanocurrency from 'nanocurrency';
-import { tools } from 'nanocurrency-web'
-import { wallet } from 'nanocurrency-web'
+import { tools } from 'nanocurrency-web';
 
-// Generates a new wallet with a mnemonic phrase, seed and an account
-// You can also generate your own entropy for the mnemonic or set a seed password
-// Notice, that losing the password will make the mnemonic phrase void
-let rawWallet = wallet.generate();
-rawWallet.publicKey = rawWallet.accounts[0].publicKey;
-rawWallet.privateKey = rawWallet.accounts[0].privateKey;
-rawWallet.publicKey = rawWallet.accounts[0].publicKey;
-delete rawWallet.accounts;
-
-console.log("wallet",rawWallet);
-
+import { verify } from '../lib/verify-nano-seed-ed25519';
+import { toHex,toU8Array } from '../lib/tools';
 import { defineComponent } from "vue";
+
+function generateToken(timestamp,algo,publicKeyHex, signatureHex) {
+    return timestamp + '.' + algo + '.' + publicKeyHex.toLowerCase() + '.' + signatureHex;
+}
 
 export default defineComponent({
     methods: {
@@ -30,26 +24,39 @@ export default defineComponent({
 
         },
     },
-
     watch: {
-        async verifyChallenge(newValue,o){
-            console.log('TRIGGERE verifyChallange');
-            const publicKey = JSON.parse(localStorage.getItem('wallet')).publicKey;
-            const signature = newValue;
-            const data = this.$data.challenge;
-            const match = tools.verify(publicKey, signature, data);
-            console.log({publicKey:publicKey,match:match});
-            this.$data.verified = match;
-        },
         async challenge(newValue,o){
-            const privateKey = JSON.parse(localStorage.getItem('wallet')).secretKey;
-            const signed = tools.sign(privateKey, newValue);
-            console.log({signed:signed});
-            this.$data.response = signed;
+            let domain = newValue;
+            let algorithm = 'ed25519-blake2'; // algorithm
+            let serverTime = +new Date(); // timestamp, ex. from GET/use UTC
+            let publicKeyHex = JSON.parse(localStorage.getItem('wallet')).publicKey;
+            let privateKeyHex = JSON.parse(localStorage.getItem('wallet')).secretKey;
+
+
+
+            console.log({"before": (serverTime+domain)});
+            console.log({"before pk": (privateKeyHex)});
+
+            let challengeStr = (serverTime + domain);
+            let challengeHex = toHex(serverTime + domain);
+            let challenge = toU8Array(challengeHex);
+            let privateKey = toU8Array(privateKeyHex);
+
+            console.log({"challengeHex":challengeHex,"challenge":challenge});
+            let signatureHex = tools.sign(privateKeyHex, challengeStr); 
+
+            let token = generateToken(serverTime,algorithm,publicKeyHex, signatureHex);
+            this.$data.response = token;
+            console.log("token", token);
+        },
+        async verifyChallenge(newValue,o){
+            let token = newValue;
+            let domain = this.$data.challenge;
+            let valid = verify(domain, token);
+            console.log("valid", valid);
+            this.$data.verified = valid.verify;
         }
     },
-
-    
     data() {
         return { wallet:localStorage.getItem('wallet'), 'challenge':'?','response':'?','verifyChallenge':'?','verified':false};
     },
@@ -57,52 +64,31 @@ export default defineComponent({
         if(!localStorage.getItem('wallet')) {
             this.$data.wallet = await this.createWallet();
         }
-    },
+    }
 });
 </script>
 
 <template>
-<h3 style="color:#ddd">Enter Proof of Ownership Challenge</h3>
-<textarea v-model="challenge"></textarea>
-<h3 style="color:#ddd">Signed Version</h3>
-<b style="cursor: pointer; background: rgb(32, 156, 233) none repeat scroll 0% 0%; margin: 16px 4px 4px; padding: 16px 24px; border-radius: 5px; color: white; display: block; word-break: break-all;">
-{{response}}
-</b>
+    <h3 style="color:#ddd">Enter Proof of Ownership Challenge</h3>
+    <textarea v-model="challenge"></textarea>
+    <h3 style="color:#ddd">Signed Version</h3>
+    <b style="cursor: pointer; background: rgb(32, 156, 233) none repeat scroll 0% 0%; margin: 16px 4px 4px; padding: 16px 24px; border-radius: 5px; color: white; display: block; word-break: break-all;">
+    {{response}}
+    </b>
 
+    <h3 style="color:#ddd">Verify Challenge ({{verified}})</h3>
+    <p style="color:white;">Copy signed reponse in the box below to verify (should turn green)</p>
+    <textarea style="background:#db3d2d;" :class="{'verified':verified===true}" v-model="verifyChallenge"></textarea>
 
+    <h3 style="color:#ddd;margin-top:120px;">Generated Wallet (localStorage)</h3>
+    <b
 
-<h3 style="color:#ddd">Verify Challenge ({{verified}})</h3>
-<p style="color:white;">Copy signed reponse in the box below to verify (should turn green)</p>
-<textarea style="background:#db3d2d;" :class="{'verified':verified===true}" v-model="verifyChallenge"></textarea>
-
-
-<h3 style="color:#ddd;margin-top:120px;">Generated Wallet (localStorage)</h3>
-<b
-
- style="cursor:pointer;background: rgb(32, 156, 233) none repeat scroll 0% 0%; margin: 16px 4px 4px; padding: 16px 24px; border-radius: 5px; color: white; display: block; word-break: break-all;">{{wallet}}</b>
+    style="cursor:pointer;background: rgb(32, 156, 233) none repeat scroll 0% 0%; margin: 16px 4px 4px; padding: 16px 24px; border-radius: 5px; color: white; display: block; word-break: break-all;">{{wallet}}</b>
 
 </template>
-
 
 <style>
 .verified {
     background:green!important;
-}
-.simpleSuccessPopup {
-    position:fixed;
-    left:16px;
-    top:16px;
-    background:green;
-    color:white;
-    -webkit-border-radius:9px;
-    -moz-border-radius:9px;
-    border-radius:9px;
-    padding:12px;
-  animation: cssAnimation 0s 5s forwards;
-  opacity: 1; 
-}
-
-@keyframes cssAnimation {
-  to   { opacity: 0; }
 }
 </style>

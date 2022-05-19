@@ -1,6 +1,6 @@
 # nano-signing-for-nft
 
-## Signing and Verifying with Nano Proof of Ownership V0.2 Protocol Token
+## Signing and Verifying with Nano Proof of Ownership V0.3 Protocol Token
 Simple example for using a Nano wallet to sign and verify anything for NFT usage. Example of sign/verify implementation "ed25519-blake2" to verify ownership through the https://github.com/neil-yoga/nano-proof-of-ownership-protocol. 
 
 ![nano](demo-web3.gif)

@@ -52,13 +52,14 @@ export default defineComponent({
         async verifyChallenge(newValue,o){
             let token = newValue;
             let domain = this.$data.challenge;
+            this.$data.pubKeyFromToken = token.split('.')[2];
             let valid = verify(domain, token);
             console.log("valid", valid);
             this.$data.verified = valid.verify;
         }
     },
     data() {
-        return { wallet:localStorage.getItem('wallet'), 'challenge':'?','response':'?','verifyChallenge':'?','verified':false};
+        return { wallet:localStorage.getItem('wallet'), 'challenge':'?','response':'?','verifyChallenge':'?','verified':false,'pubKeyFromToken':''};
     },
     async mounted() {
         if(!localStorage.getItem('wallet')) {
@@ -79,6 +80,7 @@ export default defineComponent({
     <h3 style="color:#ddd">Verify Challenge ({{verified}})</h3>
     <p style="color:white;">Copy signed reponse in the box below to verify (should turn green)</p>
     <textarea style="background:#db3d2d;" :class="{'verified':verified===true}" v-model="verifyChallenge"></textarea>
+    <p style="color:white;" v-if="verified && pubKeyFromToken">Public key: {{pubKeyFromToken}}</p>
 
     <h3 style="color:#ddd;margin-top:120px;">Generated Wallet (localStorage)</h3>
     <b

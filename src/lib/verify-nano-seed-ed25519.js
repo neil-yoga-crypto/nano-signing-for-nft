@@ -1,7 +1,5 @@
-import nacl from 'tweetnacl';
 import * as convert from './tools';
 import { tools } from 'nanocurrency-web';
-
 
 function verifyfn(domain,token) {
     let pieces = token.split('.'); //[0]=timestamp, [1]=algo, [2]=publicKeyHex, [3]=signatureHex
@@ -12,9 +10,7 @@ function verifyfn(domain,token) {
 
     let challengeStr = (pieces[0] + domain);
     let publicKeyHex = pieces[2];
-    let publicKey = convert.toU8Array(publicKeyHex);
     let signatureHex = pieces[3];
-
     const validSignature = tools.verify(publicKeyHex, signatureHex, challengeStr);
     return {"verify":validSignature};
 }

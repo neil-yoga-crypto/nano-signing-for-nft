@@ -27,24 +27,13 @@ export default defineComponent({
     watch: {
         async challenge(newValue,o){
             let domain = newValue;
-            let algorithm = 'ed25519-blake2'; // algorithm
+            let algorithm = 'ed25519-blake2'; // algorithm identifier
             let serverTime = +new Date(); // timestamp, ex. from GET/use UTC
             let publicKeyHex = JSON.parse(localStorage.getItem('wallet')).publicKey;
             let privateKeyHex = JSON.parse(localStorage.getItem('wallet')).secretKey;
-
-
-
-            console.log({"before": (serverTime+domain)});
-            console.log({"before pk": (privateKeyHex)});
-
             let challengeStr = (serverTime + domain);
-            let challengeHex = toHex(serverTime + domain);
-            let challenge = toU8Array(challengeHex);
             let privateKey = toU8Array(privateKeyHex);
-
-            console.log({"challengeHex":challengeHex,"challenge":challenge});
             let signatureHex = tools.sign(privateKeyHex, challengeStr); 
-
             let token = generateToken(serverTime,algorithm,publicKeyHex, signatureHex);
             this.$data.response = token;
             console.log("token", token);

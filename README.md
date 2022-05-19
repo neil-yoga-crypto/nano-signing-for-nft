@@ -5,6 +5,9 @@ Simple example for using a Nano wallet to sign and verify anything for NFT usage
 
 ![nano](demo-web3.gif)
 
+### Web Demo (Live)
+https://every.yoga/nano-proof/
+
 ### Install and Run
 ```
 git clone https://github.com/neil-yoga/nano-signing-for-nft
